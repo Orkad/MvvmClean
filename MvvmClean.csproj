@@ -61,8 +61,6 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Command\EventArgs.cs" />
-    <Compile Include="Command\EventRaiser.cs" />
     <Compile Include="Command\RelayCommand.cs" />
     <Compile Include="Ioc\ILocator.cs" />
     <Compile Include="Ioc\Locator.cs" />
