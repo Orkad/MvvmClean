@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Input;
+using CommonServiceLocator;
 using MvvmClean.Command;
-using MvvmClean.Ioc;
 using MvvmClean.View.Dialog;
 using MvvmClean.View.Navigation;
 
@@ -18,12 +18,14 @@ namespace MvvmClean.ViewModel.Navigation
 
         protected NavigableViewModelBase()
         {
-            BackCommand = new RelayCommand((s) => Back());
-            GoToCommand = new RelayCommand<string>(s => NavigateTo(s));
+            if(!ServiceLocator.IsLocationProviderSet)
+                throw new Exception("Le service locator doit être initialisé");
+            BackCommand = new ActionCommand((s) => Back());
+            GoToCommand = new ActionCommand<string>(s => NavigateTo(s));
 
             // permet de s'affranchir du passage du service de navigation dans le constructeur
-            _navigationService = Locator.Current.Resolve<IStackNavigationService>();
-            _dialogService = Locator.Current.Resolve<IDialogService>();
+            _navigationService = ServiceLocator.Current.GetInstance<IStackNavigationService>();
+            _dialogService = ServiceLocator.Current.GetInstance<IDialogService>();
         }
 
         protected void Back()
@@ -36,7 +38,7 @@ namespace MvvmClean.ViewModel.Navigation
             _navigationService.NavigateTo(pageKey, parameter);
         }
 
-        protected void Alert(string message, string title)
+        protected void Alert(string message, string title = "Information")
         {
             _dialogService.Alert(message, title);
         }

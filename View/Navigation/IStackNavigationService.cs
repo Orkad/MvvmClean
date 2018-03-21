@@ -6,6 +6,11 @@
     public interface IStackNavigationService
     {
         /// <summary>
+        /// Détermine si il est possible de revenir vers la page précédente
+        /// </summary>
+        bool CanGoBack { get; }
+
+        /// <summary>
         /// Retourne vers la page précédente
         /// </summary>
         void GoBack();
@@ -21,8 +26,6 @@
         /// </summary>
         /// <param name="key">clef identifiant la page sur laquelle naviguer</param>
         void NavigateTo(string key);
-
-
 
         /// <summary>
         /// Navigue vers la page en lui transmettant un paramètre

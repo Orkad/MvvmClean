@@ -9,24 +9,18 @@ namespace MvvmClean.View.Dialog.Presentation
 {
     public class WindowDialogService:IDialogService
     {
-        private readonly Window _window;
-        private readonly Dispatcher _uiDispatcher;
-
-        public WindowDialogService(Window window)
-        {
-            _window = window;
-            _uiDispatcher = Dispatcher.CurrentDispatcher;
-        }
+        private Window Window => Application.Current.MainWindow;
+        private Dispatcher UiDispatcher => Application.Current.Dispatcher;
 
         public async Task Alert(string message, string title = "Information")
         {
-            await _uiDispatcher.InvokeAsync(() => MessageBox.Show(_window, message, title, MessageBoxButton.OK));
+            await UiDispatcher.InvokeAsync(() => MessageBox.Show(Window, message, title, MessageBoxButton.OK));
         }
 
         public async Task<bool> AskConfirm(string message, string title = "Confirmation", string buttonConfirmText = "Confirmer",
             string buttonCancelText = "Annuler")
         {
-            var dialogResult = await _uiDispatcher.InvokeAsync(() => MessageBox.Show(_window, message, title, MessageBoxButton.OKCancel));
+            var dialogResult = await UiDispatcher.InvokeAsync(() => MessageBox.Show(Window, message, title, MessageBoxButton.OKCancel));
             return dialogResult == MessageBoxResult.OK;
         }
     }

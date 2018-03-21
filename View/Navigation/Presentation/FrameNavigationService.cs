@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using MvvmClean.Ioc;
+using CommonServiceLocator;
 using MvvmClean.ViewModel.Navigation;
 
 namespace MvvmClean.View.Navigation.Presentation
 {
     /// <summary>
-    /// Service de navigation par Frame de PresentationFramework de microsoft (Auteur: Nicolas Gidon)
+    /// Service de navigation par Frame pour PresentationFramework
+    /// Auteur: Nicolas Gidon)
     /// </summary>
     public class FrameNavigationService : IStackNavigationService
     {
@@ -31,107 +33,12 @@ namespace MvvmClean.View.Navigation.Presentation
         /// <summary>
         /// Frame sur laquelle sera basé le service de navigation
         /// </summary>
-        private readonly Frame _mainFrame;
+        private Frame MainFrame => Application.Current.MainWindow?.Content as Frame;
 
         /// <summary>
         /// Permet de dispatcher sur le thread UI
         /// </summary>
-        private readonly Dispatcher _uiDispatcher;
-
-        /// <summary>
-        /// Clef de la page en cours
-        /// </summary>
-        public string CurrentPageKey { get; set; }
-
-        /// <summary>
-        /// Créé une instance de service de navigation pour la frame passé en paramètre
-        /// A appeller depuis le thread UI uniquement
-        /// </summary>
-        /// <param name="frame"></param>
-        public FrameNavigationService(Frame frame)
-        {
-            if(!Locator.IsLoaded)
-            {
-                throw new ArgumentException("Le ServiceLocator doit être initialisé");
-            }
-            _mainFrame = frame;
-            _uiDispatcher = Dispatcher.CurrentDispatcher;
-        }
-
-        /// <summary>
-        /// Reviens à la page précédent le dernier NavigateTo, si aucune page précédente reste sur la page courante
-        /// </summary>
-        public void GoBack()
-        {
-            GoBack(null);
-        }
-
-        /// <summary>
-        /// Navigation vers la page associée à la clef
-        /// </summary>
-        /// <param name="pageKey">clef paramètrée pour la page</param>
-        public void NavigateTo(string pageKey)
-        {
-            NavigateTo(pageKey, null);
-        }
-
-        /// <summary>
-        /// Reviens à la page précédente si possible, en passant le paramètre au datacontext 
-        /// via l'interface <see cref="INavigable"/>. Ne fait rien si aucune page précédente.
-        /// </summary>
-        /// <param name="parameter">paramètre à faire passer au DataContext
-        /// via l'interface <see cref="INavigable"/></param>
-        public void GoBack(object parameter)
-        {
-            if (_navStack.Count > 0)
-            {
-                Page oldPage = _navStack.Pop();
-                _mainFrame.Content = oldPage;
-
-                // envoi du paramètre si le DataContext implémente INavigable
-                var navigable = oldPage.Content as INavigable;
-                navigable?.OnBackedHere(parameter);
-            }
-        }
-
-        /// <summary>
-        /// Navigation vers la page associée à la clef avec passage de paramètre si le ViewModel correspondant
-        /// implémente l'interface INavigable
-        /// </summary>
-        /// <param name="pageKey">clef paramètrée pour la page</param>
-        /// <param name="parameter">paramètre à transmettre au ViewModel s'il implémente INavigable</param>
-        public virtual void NavigateTo(string pageKey, object parameter)
-        {
-            if (!_pages.ContainsKey(pageKey))
-            {
-                throw new ArgumentException($"Page introuvable: {pageKey} ", nameof(pageKey));
-            }
-            lock (_pages)
-            {
-                // historisation de l'ancienne page
-                var oldPage = _mainFrame.Content as Page;
-                if (oldPage != null)
-                {
-                    _navStack.Push(oldPage);
-                }
-                CurrentPageKey = pageKey;
-
-                // Affection de la vue
-                var page = (Page)Activator.CreateInstance(_pages[pageKey]);
-                _mainFrame.Content = page; //n'affecte pas directement le Content (chargement interne a l'UI async)
-
-                object viewModel;
-                // Chargement du ViewModel dans une task
-                Task.Run(() =>
-                {
-                    // Passage de paramètre si le ViewModel implémente INavigable
-                    viewModel = Locator.Current.Resolve(_contexts[pageKey]);
-                    var nav = viewModel as INavigable;
-                    nav?.OnNavigatedHere(parameter);
-                    _uiDispatcher.Invoke(() => page.DataContext = viewModel);
-                });
-            }
-        }
+        private Dispatcher UiDispatcher => Application.Current.Dispatcher;
 
         /// <summary>
         /// Configuration de la navigation
@@ -144,5 +51,70 @@ namespace MvvmClean.View.Navigation.Presentation
             _pages.Add(key, typeof(TPage));
             _contexts.Add(key, typeof(TContext));
         }
+
+        #region Interface Implementation
+
+        public bool CanGoBack => _navStack.Count != 0;
+
+        public void GoBack()
+        {
+            GoBack(null);
+        }
+
+        public void NavigateTo(string pageKey)
+        {
+            NavigateTo(pageKey, null);
+        }
+
+        public void GoBack(object parameter)
+        {
+            if (_navStack.Count > 0)
+            {
+                Page oldPage = _navStack.Pop();
+                if (MainFrame == null)
+                    throw new Exception("Impossible de localiser la Frame de la fenêtre principale");
+                MainFrame.Content = oldPage;
+
+                // envoi du paramètre si le DataContext implémente INavigable
+                var navigable = oldPage.Content as INavigable;
+                navigable?.OnBackedHere(parameter);
+            }
+        }
+
+        public virtual void NavigateTo(string pageKey, object parameter)
+        {
+            if (!_pages.ContainsKey(pageKey))
+            {
+                throw new ArgumentException($"Page introuvable: {pageKey} ", nameof(pageKey));
+            }
+            lock (_pages)
+            {
+                // historisation de l'ancienne page
+                var oldPage = MainFrame.Content as Page;
+                if (oldPage != null)
+                {
+                    _navStack.Push(oldPage);
+                }
+
+                // Affection de la vue
+                var page = (Page)Activator.CreateInstance(_pages[pageKey]);
+                if (MainFrame == null)
+                    throw new Exception("Impossible de localiser la Frame de la fenêtre principale");
+                MainFrame.Content = page; //n'affecte pas directement le Content (chargement interne a l'UI async)
+
+                object viewModel;
+                // Chargement du ViewModel dans une task
+                Task.Run(() =>
+                {
+                    // Passage de paramètre si le ViewModel implémente INavigable
+                    viewModel = ServiceLocator.Current.GetInstance(_contexts[pageKey]);
+                    UiDispatcher.Invoke(() => page.DataContext = viewModel);
+                    var nav = viewModel as INavigable;
+                    nav?.OnNavigatedHere(parameter);
+                });
+            }
+        }
+
+        #endregion
     }
 }

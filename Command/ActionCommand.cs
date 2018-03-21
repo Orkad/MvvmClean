@@ -8,7 +8,7 @@ namespace MvvmClean.Command
     /// <summary>
     /// Defini une commande, basé sur System.Windows.Input.ICommand
     /// </summary>
-    public class RelayCommand : ICommand
+    public class ActionCommand : ICommand
     {
         readonly Action<object> _execute;
         readonly Predicate<object> _canExecute;
@@ -17,9 +17,10 @@ namespace MvvmClean.Command
         /// Création d'une instance de la commande avec l'action que doit executer la commande en paramètre
         /// </summary>
         /// <param name="actionToExecute">action a executer</param>
-        public RelayCommand(Action<object> actionToExecute)
+        public ActionCommand(Action<object> actionToExecute)
             : this(actionToExecute, null)
         {
+            
         }
 
         /// <summary>
@@ -28,7 +29,7 @@ namespace MvvmClean.Command
         /// </summary>
         /// <param name="actionToExecute">action a executer</param>
         /// <param name="canExecute">prédicat déterminant si on peut executer cette commande</param>
-        public RelayCommand(Action<object> actionToExecute, Predicate<object> canExecute)
+        public ActionCommand(Action<object> actionToExecute, Predicate<object> canExecute)
         {
             _execute = actionToExecute ?? throw new ArgumentNullException(nameof(actionToExecute));
             _canExecute = canExecute;
@@ -68,7 +69,7 @@ namespace MvvmClean.Command
     /// Defini une commande typée, basé sur System.Windows.Input.ICommand
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class RelayCommand<T> : ICommand
+    public class ActionCommand<T> : ICommand
     {
         readonly Action<T> _action;
         readonly Predicate<T> _canInvokeAction;
@@ -77,7 +78,7 @@ namespace MvvmClean.Command
         /// Création d'une instance de la commande avec l'action que doit executer la commande en paramètre
         /// </summary>
         /// <param name="actionToExecute">action a executer</param>
-        public RelayCommand(Action<T> actionToExecute)
+        public ActionCommand(Action<T> actionToExecute)
             : this(actionToExecute, null)
         {
         }
@@ -88,7 +89,7 @@ namespace MvvmClean.Command
         /// </summary>
         /// <param name="actionToExecute">action a executer</param>
         /// <param name="canExecute">prédicat déterminant si on peut executer cette commande</param>
-        public RelayCommand(Action<T> actionToExecute, Predicate<T> canExecute)
+        public ActionCommand(Action<T> actionToExecute, Predicate<T> canExecute)
         {
             _action = actionToExecute ?? throw new ArgumentNullException(nameof(actionToExecute));
             _canInvokeAction = canExecute;
@@ -104,10 +105,10 @@ namespace MvvmClean.Command
         {
             if (this._canInvokeAction == null)
                 return true;
-                if (parameter == null && typeof(T).GetTypeInfo().IsValueType)
-                    return _canInvokeAction(default(T));
-                if (parameter == null || parameter is T)
-                    return _canInvokeAction((T)parameter);
+            if (parameter == null && typeof(T).GetTypeInfo().IsValueType)
+                return _canInvokeAction(default(T));
+            if (parameter == null || parameter is T)
+                return _canInvokeAction((T)parameter);
             return false;
         }
 
