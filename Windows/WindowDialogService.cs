@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using MvvmClean.View.Dialog;
 
-namespace MvvmClean.View.Dialog.Presentation
+namespace MvvmClean.Windows
 {
     public class WindowDialogService:IDialogService
     {

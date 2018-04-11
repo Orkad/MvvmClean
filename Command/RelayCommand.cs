@@ -17,6 +17,15 @@ namespace MvvmClean.Command
         /// Création d'une instance de la commande avec l'action que doit executer la commande en paramètre
         /// </summary>
         /// <param name="actionToExecute">action a executer</param>
+        public RelayCommand(Action actionToExecute)
+            : this((o) => actionToExecute(), null)
+        {
+        }
+
+        /// <summary>
+        /// Création d'une instance de la commande avec l'action que doit executer la commande en paramètre
+        /// </summary>
+        /// <param name="actionToExecute">action a executer</param>
         public RelayCommand(Action<object> actionToExecute)
             : this(actionToExecute, null)
         {

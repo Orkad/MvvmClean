@@ -4,24 +4,25 @@ using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using MvvmClean.Ioc;
+using MvvmClean.View.Navigation;
 using MvvmClean.ViewModel.Navigation;
 
-namespace MvvmClean.View.Navigation.Presentation
+namespace MvvmClean.Windows
 {
     /// <summary>
     /// Service de navigation par Frame de PresentationFramework de microsoft (Auteur: Nicolas Gidon)
     /// </summary>
-    public class FrameNavigationService : IStackNavigationService
+    public class FrameNavigationService : INavigationService
     {
         /// <summary>
         /// Association d'une clef string avec un Type de Page
         /// </summary>
-        private readonly Dictionary<string, Type> _pages = new Dictionary<string, Type>();
+        private readonly Dictionary<object, Type> _pages = new Dictionary<object, Type>();
 
         /// <summary>
         /// Association d'une clef string avec un type de contexte (ViewModel)
         /// </summary>
-        private readonly Dictionary<string, Type> _contexts = new Dictionary<string, Type>();
+        private readonly Dictionary<object, Type> _contexts = new Dictionary<object, Type>();
 
         /// <summary>
         /// Historique de navigation
@@ -31,7 +32,7 @@ namespace MvvmClean.View.Navigation.Presentation
         /// <summary>
         /// Frame sur laquelle sera basé le service de navigation
         /// </summary>
-        private readonly Frame _mainFrame;
+        private readonly ContentControl _contentControl;
 
         /// <summary>
         /// Permet de dispatcher sur le thread UI
@@ -39,40 +40,18 @@ namespace MvvmClean.View.Navigation.Presentation
         private readonly Dispatcher _uiDispatcher;
 
         /// <summary>
-        /// Clef de la page en cours
-        /// </summary>
-        public string CurrentPageKey { get; set; }
-
-        /// <summary>
         /// Créé une instance de service de navigation pour la frame passé en paramètre
         /// A appeller depuis le thread UI uniquement
         /// </summary>
-        /// <param name="frame"></param>
-        public FrameNavigationService(Frame frame)
+        /// <param name="contentControl">Conteneur cible de la navigation</param>
+        public FrameNavigationService(ContentControl contentControl)
         {
             if(!Locator.IsLoaded)
             {
                 throw new ArgumentException("Le ServiceLocator doit être initialisé");
             }
-            _mainFrame = frame;
+            _contentControl = contentControl;
             _uiDispatcher = Dispatcher.CurrentDispatcher;
-        }
-
-        /// <summary>
-        /// Reviens à la page précédent le dernier NavigateTo, si aucune page précédente reste sur la page courante
-        /// </summary>
-        public void GoBack()
-        {
-            GoBack(null);
-        }
-
-        /// <summary>
-        /// Navigation vers la page associée à la clef
-        /// </summary>
-        /// <param name="pageKey">clef paramètrée pour la page</param>
-        public void NavigateTo(string pageKey)
-        {
-            NavigateTo(pageKey, null);
         }
 
         /// <summary>
@@ -86,7 +65,7 @@ namespace MvvmClean.View.Navigation.Presentation
             if (_navStack.Count > 0)
             {
                 Page oldPage = _navStack.Pop();
-                _mainFrame.Content = oldPage;
+                _contentControl.Content = oldPage;
 
                 // envoi du paramètre si le DataContext implémente INavigable
                 var navigable = oldPage.Content as INavigable;
@@ -98,34 +77,33 @@ namespace MvvmClean.View.Navigation.Presentation
         /// Navigation vers la page associée à la clef avec passage de paramètre si le ViewModel correspondant
         /// implémente l'interface INavigable
         /// </summary>
-        /// <param name="pageKey">clef paramètrée pour la page</param>
+        /// <param name="key">clef paramètrée pour la page</param>
         /// <param name="parameter">paramètre à transmettre au ViewModel s'il implémente INavigable</param>
-        public virtual void NavigateTo(string pageKey, object parameter)
+        public virtual void NavigateTo(object key, object parameter)
         {
-            if (!_pages.ContainsKey(pageKey))
+            if (!_pages.ContainsKey(key))
             {
-                throw new ArgumentException($"Page introuvable: {pageKey} ", nameof(pageKey));
+                throw new ArgumentException($"Page introuvable: {key} ", nameof(key));
             }
             lock (_pages)
             {
                 // historisation de l'ancienne page
-                var oldPage = _mainFrame.Content as Page;
+                var oldPage = _contentControl.Content as Page;
                 if (oldPage != null)
                 {
                     _navStack.Push(oldPage);
                 }
-                CurrentPageKey = pageKey;
 
                 // Affection de la vue
-                var page = (Page)Activator.CreateInstance(_pages[pageKey]);
-                _mainFrame.Content = page; //n'affecte pas directement le Content (chargement interne a l'UI async)
+                var page = (Page)Activator.CreateInstance(_pages[key]);
+                _contentControl.Content = page; //n'affecte pas directement le Content (chargement interne a l'UI async)
 
                 object viewModel;
                 // Chargement du ViewModel dans une task
                 Task.Run(() =>
                 {
                     // Passage de paramètre si le ViewModel implémente INavigable
-                    viewModel = Locator.Current.Resolve(_contexts[pageKey]);
+                    viewModel = Locator.Current.Resolve(_contexts[key]);
                     var nav = viewModel as INavigable;
                     nav?.OnNavigatedHere(parameter);
                     _uiDispatcher.Invoke(() => page.DataContext = viewModel);
@@ -139,7 +117,7 @@ namespace MvvmClean.View.Navigation.Presentation
         /// <typeparam name="TContext">Le contexte de donnée a appliquer à la page</typeparam>
         /// <typeparam name="TPage">La page a associer</typeparam>
         /// <param name="key">La clef associée</param>
-        public void Configure<TContext,TPage>(string key)where TPage:Page
+        public void Configure<TContext,TPage>(object key)where TPage:Page
         {
             _pages.Add(key, typeof(TPage));
             _contexts.Add(key, typeof(TContext));

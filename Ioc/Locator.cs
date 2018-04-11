@@ -16,7 +16,7 @@ namespace MvvmClean.Ioc
 
         public static void SetLocator<T>() where T:ILocator, new()
         {
-            Current = Activator.CreateInstance<T>();
+            Current = new T();
         }
     }
 }
